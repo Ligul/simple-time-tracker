@@ -24,8 +24,20 @@
         }
     </style>
 </head>
-<body>
-    <div class="container my-5">
+<body class="bg-light">
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h1>Time Tracker</h1>
+            <a href="/services-hub" class="btn btn-primary">
+                Other Services
+            </a>
+        </div>
+        <p class="text-muted mb-4">
+            Track time spent on your tasks with a simple and efficient timer
+        </p>
+
+        <hr>
+
         <!-- Timer Section -->
         <div class="text-center mb-4">
             <div class="timer" id="currentTime">00:00:00</div>
@@ -37,6 +49,8 @@
             </div>
         </div>
 
+        <hr>
+
         <!-- Tasks Section -->
         <div id="tasksSection">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -45,6 +59,34 @@
             </div>
             <div id="tasksList" class="task-list"></div>
             <small class="text-muted mt-2 d-block">Total all tasks: <span id="totalTasksTime">00:00:00</span></small>
+        </div>
+
+        <!-- Add Footer -->
+        <hr class="mt-4">
+        <div class="d-flex justify-content-end gap-2">
+            <input type="file" id="importInput" accept=".json" class="d-none">
+            <button class="btn btn-outline-secondary btn-sm" id="exportBtn">Export</button>
+            <button class="btn btn-outline-secondary btn-sm" id="importBtn">Import</button>
+            <button class="btn btn-outline-danger btn-sm" id="clearBtn">Clear All</button>
+        </div>
+    </div>
+
+    <!-- Universal Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationTitle">Confirmation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="confirmationMessage">
+                    This action cannot be undone. Are you sure?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmationButton">Confirm</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -90,8 +132,10 @@
     <script>
         class TimeTracker {
             constructor() {
-                this.tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-                this.selectedTaskId = localStorage.getItem('selectedTaskId');
+                this.storagePrefix = 'simple-time-tracker_';
+                this.dataVersion = 1;
+                this.tasks = this.getFromStorage('tasks') || [];
+                this.selectedTaskId = this.getFromStorage('selectedTaskId');
                 this.isRunning = false;
                 this.startTime = null;
                 this.timerInterval = null;
@@ -112,8 +156,12 @@
                 this.totalTasksTimeEl = document.getElementById('totalTasksTime');
                 this.modals = {
                     cancel: new bootstrap.Modal(document.getElementById('cancelModal')),
-                    delete: new bootstrap.Modal(document.getElementById('deleteModal'))
+                    delete: new bootstrap.Modal(document.getElementById('deleteModal')),
+                    confirmation: new bootstrap.Modal(document.getElementById('confirmationModal'))
                 };
+                this.confirmationTitle = document.getElementById('confirmationTitle');
+                this.confirmationMessage = document.getElementById('confirmationMessage');
+                this.confirmationButton = document.getElementById('confirmationButton');
             }
 
             initializeEventListeners() {
@@ -123,10 +171,18 @@
                 document.getElementById('confirmCancel').addEventListener('click', () => this.cancelTimer());
                 document.getElementById('addTaskBtn').addEventListener('click', () => this.addTask());
                 document.getElementById('confirmDelete').addEventListener('click', () => this.deleteSelectedTask());
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportData());
+                document.getElementById('importBtn').addEventListener('click', () => this.importData());
+                document.getElementById('clearBtn').addEventListener('click', () => this.showConfirmation(
+                    'Clear All Data',
+                    'This will delete all tasks and reset the timer. This action cannot be undone.',
+                    () => this.clearAll()
+                ));
+                document.getElementById('importInput').addEventListener('change', (e) => this.handleImportFile(e));
             }
 
             loadTimerState() {
-                const savedState = localStorage.getItem('timerState');
+                const savedState = this.getFromStorage('timerState');
                 if (savedState) {
                     const state = JSON.parse(savedState);
                     this.startTime = new Date(state.startTime);
@@ -147,13 +203,13 @@
 
             saveTimerState() {
                 if (this.isRunning) {
-                    localStorage.setItem('timerState', JSON.stringify({
+                    this.setToStorage('timerState', {
                         startTime: this.startTime.toISOString(),
                         selectedTaskId: this.selectedTaskId,
                         isRunning: this.isRunning
-                    }));
+                    });
                 } else {
-                    localStorage.removeItem('timerState');
+                    localStorage.removeItem(this.storagePrefix + 'timerState');
                 }
             }
 
@@ -291,7 +347,7 @@
             selectTask(id) {
                 if (!this.isRunning) {
                     this.selectedTaskId = id;
-                    localStorage.setItem('selectedTaskId', id);
+                    this.saveTasks();
                     this.renderTasks();
                     this.updateTimer();
                 }
@@ -330,8 +386,103 @@
             }
 
             saveTasks() {
-                localStorage.setItem('tasks', JSON.stringify(this.tasks));
-                localStorage.setItem('selectedTaskId', this.selectedTaskId);
+                this.setToStorage('tasks', this.tasks);
+                this.setToStorage('selectedTaskId', this.selectedTaskId);
+            }
+
+            // Storage helpers
+            getFromStorage(key) {
+                return JSON.parse(localStorage.getItem(this.storagePrefix + key));
+            }
+
+            setToStorage(key, value) {
+                localStorage.setItem(this.storagePrefix + key, JSON.stringify(value));
+            }
+
+            // New methods for import/export/clear
+            showConfirmation(title, message, onConfirm) {
+                this.confirmationTitle.textContent = title;
+                this.confirmationMessage.textContent = message;
+                
+                // Remove previous listener
+                this.confirmationButton.replaceWith(this.confirmationButton.cloneNode(true));
+                this.confirmationButton = document.getElementById('confirmationButton');
+                
+                // Add new listener
+                this.confirmationButton.addEventListener('click', () => {
+                    onConfirm();
+                    this.modals.confirmation.hide();
+                });
+                
+                this.modals.confirmation.show();
+            }
+
+            exportData() {
+                const data = {
+                    version: this.dataVersion,
+                    tasks: this.tasks,
+                    selectedTaskId: this.selectedTaskId,
+                    timerState: this.getFromStorage('timerState')
+                };
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'time-tracker-backup.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            importData() {
+                document.getElementById('importInput').click();
+            }
+
+            handleImportFile(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.version !== this.dataVersion) {
+                            alert('Incompatible data version');
+                            return;
+                        }
+
+                        this.showConfirmation(
+                            'Import Data',
+                            'This will replace all current data. Are you sure?',
+                            () => this.performImport(data)
+                        );
+                    } catch (err) {
+                        alert('Invalid file format');
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = ''; // Reset file input
+            }
+
+            performImport(data) {
+                this.tasks = data.tasks;
+                this.selectedTaskId = data.selectedTaskId;
+                if (data.timerState) {
+                    this.setToStorage('timerState', data.timerState);
+                }
+                this.saveTasks();
+                window.location.reload();
+            }
+
+            clearAll() {
+                // Clear all storage with prefix
+                Object.keys(localStorage)
+                    .filter(key => key.startsWith(this.storagePrefix))
+                    .forEach(key => localStorage.removeItem(key));
+                
+                window.location.reload();
             }
         }
 
