@@ -44,6 +44,7 @@
                 <button class="btn btn-outline-primary btn-sm" id="addTaskBtn">+ Add Task</button>
             </div>
             <div id="tasksList" class="task-list"></div>
+            <small class="text-muted mt-2 d-block">Total all tasks: <span id="totalTasksTime">00:00:00</span></small>
         </div>
     </div>
 
@@ -108,6 +109,7 @@
                 this.startPauseBtn = document.getElementById('startPauseBtn');
                 this.tasksSection = document.getElementById('tasksSection');
                 this.tasksList = document.getElementById('tasksList');
+                this.totalTasksTimeEl = document.getElementById('totalTasksTime');
                 this.modals = {
                     cancel: new bootstrap.Modal(document.getElementById('cancelModal')),
                     delete: new bootstrap.Modal(document.getElementById('deleteModal'))
@@ -281,6 +283,9 @@
                         </div>
                     </div>
                 `).join('');
+
+                const totalTime = this.tasks.reduce((sum, task) => sum + task.timeSpent, 0);
+                this.totalTasksTimeEl.textContent = this.formatTime(totalTime);
             }
 
             selectTask(id) {
