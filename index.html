@@ -25,6 +25,12 @@
         body {
             border: none !important;
         }
+        .empty-list {
+            color: #b5b5b5;
+            font-size: 14px;
+            padding: 15px;
+            text-align: center;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -60,7 +66,10 @@
                 <h4>Tasks</h4>
                 <button class="btn btn-outline-primary btn-sm" id="addTaskBtn">+ Add Task</button>
             </div>
-            <div id="tasksList" class="task-list"></div>
+            <div class="todo-list">
+                <div class="empty-list" id="emptyList">No tasks yet... Time to start something awesome! ✨</div>
+                <ul id="tasksList" class="task-list"></ul>
+            </div>
             <small class="text-muted mt-2 d-block">Total all tasks: <span id="totalTasksTime">00:00:00</span></small>
         </div>
 
@@ -165,6 +174,7 @@
                 this.confirmationTitle = document.getElementById('confirmationTitle');
                 this.confirmationMessage = document.getElementById('confirmationMessage');
                 this.confirmationButton = document.getElementById('confirmationButton');
+                this.emptyList = document.getElementById('emptyList');
             }
 
             initializeEventListeners() {
@@ -321,6 +331,11 @@
             }
 
             renderTasks() {
+                if (this.tasks.length === 0) {
+                    this.emptyList.style.display = 'block';
+                } else {
+                    this.emptyList.style.display = 'none';
+                }
                 this.tasksList.innerHTML = this.tasks.map(task => `
                     <div class="card mb-2 ${task.id === this.selectedTaskId ? 'border-primary' : ''} ${task.done ? 'bg-light' : ''}">
                         <div class="card-body d-flex justify-content-between align-items-center">
