@@ -39,6 +39,34 @@
             align-items: center;
             gap: 0.5rem;
         }
+        .reorder-buttons {
+            display: flex;
+            flex-direction: column;
+            margin-left: 10px;
+        }
+        .reorder-buttons .btn {
+            padding: 3px 8px;
+            font-size: 12px;
+            line-height: 1;
+            border-radius: 0;
+            margin: 2px 0;
+            min-width: 28px;
+            height: 20px;
+            border: 2px solid #343a40;
+            color: #343a40;
+            background-color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .reorder-buttons .btn:hover:not(:disabled) {
+            background-color: #343a40;
+            color: white;
+        }
+        .reorder-buttons .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -330,7 +358,7 @@
                 } else {
                     this.emptyList.style.display = 'none';
                 }
-                this.tasksList.innerHTML = this.tasks.map(task => `
+                this.tasksList.innerHTML = this.tasks.map((task, index) => `
                     <div class="card mb-2 ${task.id === this.selectedTaskId ? 'border-primary' : ''} ${task.done ? 'completed-task' : ''}">
                         <div class="card-body d-flex justify-content-between align-items-center">
                             <div class="form-check flex-grow-1">
@@ -340,13 +368,25 @@
                                     value="${task.name}" onchange="timeTracker.updateTaskName('${task.id}', this.value)">
                                 <small class="text-muted ms-2">${this.formatTime(task.timeSpent)}</small>
                             </div>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-primary" onclick="timeTracker.selectTask('${task.id}')">
-                                    Select
-                                </button>
-                                <button class="btn btn-outline-danger" style="margin-left: 10px;" onclick="timeTracker.confirmDeleteTask('${task.id}')">
-                                    Delete
-                                </button>
+                            <div class="d-flex align-items-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="timeTracker.selectTask('${task.id}')">
+                                        Select
+                                    </button>
+                                    <button class="btn btn-outline-danger" style="margin-left: 10px;" onclick="timeTracker.confirmDeleteTask('${task.id}')">
+                                        Delete
+                                    </button>
+                                </div>
+                                <div class="reorder-buttons">
+                                    <button class="btn" onclick="timeTracker.moveTaskUp(${index})" 
+                                        ${index === 0 || this.isRunning ? 'disabled' : ''}>
+                                        ▲
+                                    </button>
+                                    <button class="btn" onclick="timeTracker.moveTaskDown(${index})"
+                                        ${index === this.tasks.length - 1 || this.isRunning ? 'disabled' : ''}>
+                                        ▼
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -400,6 +440,26 @@
                     this.saveTasks();
                     this.renderTasks();
                     this.modal.hide();
+                }
+            }
+
+            moveTaskUp(index) {
+                if (index > 0 && !this.isRunning) {
+                    const temp = this.tasks[index];
+                    this.tasks[index] = this.tasks[index - 1];
+                    this.tasks[index - 1] = temp;
+                    this.saveTasks();
+                    this.renderTasks();
+                }
+            }
+
+            moveTaskDown(index) {
+                if (index < this.tasks.length - 1 && !this.isRunning) {
+                    const temp = this.tasks[index];
+                    this.tasks[index] = this.tasks[index + 1];
+                    this.tasks[index + 1] = temp;
+                    this.saveTasks();
+                    this.renderTasks();
                 }
             }
 
