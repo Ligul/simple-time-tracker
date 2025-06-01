@@ -364,9 +364,9 @@
                             <div class="form-check flex-grow-1">
                                 <input class="form-check-input" type="checkbox" ${task.done ? 'checked' : ''}
                                     onchange="timeTracker.toggleTaskDone('${task.id}')">
-                                <input class="form-control form-control-sm d-inline-block w-auto" type="text"
+                                <input class="form-control form-control-sm flex-fill" type="text"
                                     value="${task.name}" onchange="timeTracker.updateTaskName('${task.id}', this.value)">
-                                <small class="text-muted ms-2">${this.formatTime(task.timeSpent)}</small>
+                                <small class="text-muted ms-2 me-3 flex-shrink-0">${this.formatTime(task.timeSpent)}</small>
                             </div>
                             <div class="d-flex align-items-center">
                                 <div class="btn-group btn-group-sm">
