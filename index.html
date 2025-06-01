@@ -31,6 +31,14 @@
             padding: 15px;
             text-align: center;
         }
+        .completed-task {
+            background-color: #dee2e6 !important;
+        }
+        .form-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -77,8 +85,9 @@
         <hr class="mt-4">
         <div class="d-flex justify-content-end gap-2">
             <input type="file" id="importInput" accept=".json" class="d-none">
-            <button class="btn btn-outline-secondary btn-sm" id="exportBtn">Export</button>
-            <button class="btn btn-outline-secondary btn-sm" id="importBtn">Import</button>
+            <button class="btn btn-outline-primary btn-sm" id="copyReportBtn">📋 Copy Report</button>
+            <button class="btn btn-outline-primary btn-sm" id="exportBtn">Export</button>
+            <button class="btn btn-outline-primary btn-sm" id="importBtn">Import</button>
             <button class="btn btn-outline-danger btn-sm" id="clearBtn">Clear All</button>
         </div>
     </div>
@@ -167,6 +176,7 @@
                     'Yes'
                 ));
                 document.getElementById('addTaskBtn').addEventListener('click', () => this.addTask());
+                document.getElementById('copyReportBtn').addEventListener('click', () => this.copyReport());
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportData());
                 document.getElementById('importBtn').addEventListener('click', () => this.importData());
                 document.getElementById('clearBtn').addEventListener('click', () => this.showModal(
@@ -321,7 +331,7 @@
                     this.emptyList.style.display = 'none';
                 }
                 this.tasksList.innerHTML = this.tasks.map(task => `
-                    <div class="card mb-2 ${task.id === this.selectedTaskId ? 'border-primary' : ''} ${task.done ? 'bg-light' : ''}">
+                    <div class="card mb-2 ${task.id === this.selectedTaskId ? 'border-primary' : ''} ${task.done ? 'completed-task' : ''}">
                         <div class="card-body d-flex justify-content-between align-items-center">
                             <div class="form-check flex-grow-1">
                                 <input class="form-check-input" type="checkbox" ${task.done ? 'checked' : ''}
@@ -408,6 +418,68 @@
             }
 
             // New methods for import/export/clear
+            copyReport() {
+                if (this.tasks.length === 0) {
+                    this.showModal(
+                        'No Tasks',
+                        'There are no tasks to include in the report.',
+                        () => {},
+                        'OK',
+                        'btn-primary'
+                    );
+                    return;
+                }
+
+                let report = '📊 TIME TRACKING REPORT\n';
+                report += '═══════════════════════════════════════\n';
+                
+                // Add current date
+                const now = new Date();
+                report += `Generated on ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}\n\n`;
+                
+                // Add tasks
+                report += 'TASKS:\n';
+                report += '──────────────────────────────────────\n';
+                
+                this.tasks.forEach((task, index) => {
+                    const checkbox = task.done ? '✅' : '⏳';
+                    const taskTime = this.formatTime(task.timeSpent);
+                    report += `${index + 1}. ${checkbox} ${task.name}\n`;
+                    report += `   Time spent: ${taskTime}\n\n`;
+                });
+                
+                // Add separator and total
+                report += '═══════════════════════════════════════\n';
+                const totalTime = this.tasks.reduce((sum, task) => sum + task.timeSpent, 0);
+                report += `🕐 TOTAL TIME: ${this.formatTime(totalTime)}\n`;
+                report += '═══════════════════════════════════════';
+                
+                // Copy to clipboard
+                navigator.clipboard.writeText(report).then(() => {
+                    // Show success feedback by temporarily changing button text
+                    const btn = document.getElementById('copyReportBtn');
+                    const originalText = btn.textContent;
+                    btn.textContent = '✅ Copied!';
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-success');
+                    
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.classList.remove('btn-success');
+                        btn.classList.add('btn-outline-primary');
+                    }, 2000);
+                }).catch(err => {
+                    this.showModal(
+                        'Copy Failed',
+                        'Failed to copy report to clipboard. Your browser might not support this feature.',
+                        () => {},
+                        'OK',
+                        'btn-primary'
+                    );
+                    console.error('Failed to copy: ', err);
+                });
+            }
+
             exportData() {
                 const data = {
                     version: this.dataVersion,
